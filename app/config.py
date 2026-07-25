@@ -5,6 +5,7 @@ class Settings(BaseSettings):
     postgres_db: str
     postgres_user: str
     postgres_password: str
+    upload_dir: str = "./uploads"
 
     class Config:
         env_file = ".env"
