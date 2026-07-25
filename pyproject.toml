@@ -3,4 +3,8 @@ name = "async-doc-ocr"
 version = "0.1.0"
 description = "Add your description here"
 requires-python = ">=3.12"
-dependencies = []
+dependencies = [
+    "asyncpg>=0.31.0",
+    "pydantic-settings>=2.14.2",
+    "sqlalchemy>=2.0.51",
+]
