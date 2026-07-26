@@ -6,6 +6,8 @@ class Settings(BaseSettings):
     postgres_user: str
     postgres_password: str
     upload_dir: str = "./uploads"
+    rabbitmq_url: str
+    queue_name: str
 
     class Config:
         env_file = ".env"

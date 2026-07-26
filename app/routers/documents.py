@@ -9,6 +9,7 @@ from app.database import get_db
 from app.models import Document, Status
 from app.config import settings
 from app.schemas import DocumentStatusResponse, DocumentResultResponse
+from app.services.rabbitmq import publish_job
 
 router = APIRouter(prefix="/documents", tags=["documents"])
 
@@ -38,6 +39,8 @@ async def upload_document(
     db.add(document)
     await db.commit()
     await db.refresh(document)
+
+    await publish_job(document.id)
 
     return {"id": document.id, "name": document.name, "status": document.status}
 
