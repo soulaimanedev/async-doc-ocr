@@ -23,7 +23,12 @@ The API and the worker are separate processes. When you upload a document the AP
 
 ## Running locally
 
-You need Docker and Docker Compose. A `.env` file with the required credentials will be provided separately — place it in the project root before starting.
+You need Docker and Docker Compose. Copy `.env.example` to `.env` and fill in the four values:
+
+```bash
+cp .env.example .env
+# then edit .env with your credentials
+```
 
 Then start everything:
 
@@ -66,13 +71,56 @@ Only PDF files are accepted. Anything else gets a 400.
 
 ## Running tests
 
-Tests require [uv](https://docs.astral.sh/uv/getting-started/installation/). Install it if you don't have it, then:
+### Prerequisites
+
+**1. Docker and Docker Compose**
+
+Install Docker Desktop (includes Compose) for Mac or Windows. On Linux, install the Docker Engine and the Compose plugin:
 
 ```bash
+# Linux (Debian/Ubuntu)
+sudo apt-get update && sudo apt-get install -y docker.io docker-compose-plugin
+```
+
+**2. uv**
+
+```bash
+curl -LsSf https://astral.sh/uv/install.sh | sh
+```
+
+**3. Environment file**
+
+If you haven't done this already for running the app:
+
+```bash
+cp .env.example .env
+# Edit .env and fill in POSTGRES_USER, POSTGRES_PASSWORD, POSTGRES_DB, and QUEUE_NAME
+```
+
+### Running
+
+Start the full stack in the background:
+
+```bash
+docker compose up -d --build
+```
+
+Wait until the API is healthy before running tests:
+
+```bash
+until curl -sf http://localhost:8000/health; do echo "waiting..."; sleep 2; done
+```
+
+Install test dependencies and run:
+
+```bash
+uv sync --group dev
 uv run pytest
 ```
 
-Tests use an in-memory SQLite database and mock out RabbitMQ, so no infrastructure needed.
+The tests hit the real API at `http://localhost:8000`, publish to the real RabbitMQ queue, and assert against the real Postgres database. The end-to-end tests upload actual PDF fixtures and poll until the worker finishes processing them — allow up to 30 seconds per test.
+
+In CI, the stack is started automatically via `docker compose up --build` before tests run.
 
 ## Known limits
 
