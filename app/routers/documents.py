@@ -2,13 +2,14 @@ import os
 import uuid
 
 import aiofiles
-from fastapi import APIRouter, UploadFile, File, HTTPException, Depends
+from fastapi import APIRouter, UploadFile, File, HTTPException, Depends, Query
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.database import get_db
 from app.models import Document, Status
 from app.config import settings
-from app.schemas import DocumentStatusResponse, DocumentResultResponse
+from app.schemas import DocumentStatusResponse, DocumentResultResponse, DocumentListResponse
 from app.services.rabbitmq import publish_job
 
 router = APIRouter(prefix="/documents", tags=["documents"])
@@ -43,6 +44,19 @@ async def upload_document(
     await publish_job(document.id)
 
     return {"id": document.id, "name": document.name, "status": document.status}
+
+@router.get("", response_model=DocumentListResponse)
+async def list_documents(
+    db: AsyncSession = Depends(get_db),
+    limit: int = Query(default=20, ge=1, le=100),
+    offset: int = Query(default=0, ge=0),
+):
+    total = (await db.execute(select(func.count()).select_from(Document))).scalar()
+    rows = (await db.execute(
+        select(Document).order_by(Document.created_at.desc()).offset(offset).limit(limit)
+    )).scalars().all()
+    return DocumentListResponse(total=total, limit=limit, offset=offset, items=rows)
+
 
 @router.get("/{id}/status", response_model=DocumentStatusResponse)
 async def get_doc_status(

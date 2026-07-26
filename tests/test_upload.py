@@ -47,6 +47,49 @@ async def test_duplicate_filename_creates_separate_documents(http_client):
     assert r1.json()["id"] != r2.json()["id"]
 
 
+async def test_list_documents_returns_paginated_results(http_client):
+    await upload(http_client, "sample.pdf")
+    await upload(http_client, "sample.pdf")
+
+    response = await http_client.get("/documents?limit=1&offset=0")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["limit"] == 1
+    assert data["offset"] == 0
+    assert data["total"] >= 2
+    assert len(data["items"]) == 1
+    item = data["items"][0]
+    assert "id" in item
+    assert "name" in item
+    assert "status" in item
+    assert "created_at" in item
+    assert "text_preview" in item
+    assert "extracted_text" not in item
+
+
+async def test_list_documents_text_preview_is_truncated(http_client):
+    result, _ = await upload_and_wait(http_client, "heavy.pdf")
+    assert result["status"] == "success"
+
+    response = await http_client.get("/documents?limit=1&offset=0")
+    item = response.json()["items"][0]
+    if item["text_preview"] is not None:
+        assert len(item["text_preview"]) <= 203  # 200 chars + "..."
+
+
+async def test_list_documents_default_limit(http_client):
+    response = await http_client.get("/documents")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["limit"] == 20
+    assert len(data["items"]) <= 20
+
+
+async def test_list_documents_invalid_limit_returns_422(http_client):
+    response = await http_client.get("/documents?limit=999")
+    assert response.status_code == 422
+
+
 async def test_get_status_not_found(http_client):
     response = await http_client.get("/documents/999999/status")
     assert response.status_code == 404

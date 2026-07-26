@@ -5,9 +5,10 @@ Upload a PDF, get the text out of it. The extraction runs in the background so t
 ## How it works
 
 ```
-POST /documents          → saves the file, queues a job, returns an ID
-GET  /documents/{id}/status  → pending / running / success / failed
-GET  /documents/{id}/result  → the extracted text once it's done
+POST /documents               → saves the file, queues a job, returns an ID
+GET  /documents               → list all documents (paginated)
+GET  /documents/{id}/status   → pending / running / success / failed
+GET  /documents/{id}/result   → the extracted text once it's done
 ```
 
 The API and the worker are separate processes. When you upload a document the API writes it to disk, creates a DB record, and drops the document ID onto a RabbitMQ queue. The worker picks it up, runs Tesseract on each page (via pdf2image), and writes the result back to Postgres. If OCR fails it retries up to 3 times before marking the job as failed with an error message.
@@ -44,6 +45,13 @@ FastAPI's interactive docs are at `http://localhost:8000/docs` — useful for tr
 
 > **Note:** if the file upload fails in the Swagger UI with a "Failed to fetch" error, this is likely caused by browser extensions blocking local requests — Brave's Shields is a known culprit. Try Chrome/Firefox, or disable Shields for `localhost`, if you hit this. curl works regardless.
 ## Usage
+
+List all documents (paginated):
+
+```bash
+curl "http://localhost:8000/documents?limit=20&offset=0"
+# {"total": 5, "limit": 20, "offset": 0, "items": [...]}
+```
 
 Upload a PDF:
 
